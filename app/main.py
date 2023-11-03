@@ -57,14 +57,17 @@ class Request:
         self.http_method = http_method
         self.path = path
         self.http_version = http_version
+        self.user_agent = None
 
     def decode(self, data: bytes):
         """Parse the data from the client into a Request object."""
         data_list = data.decode().split(CRLF)
         http_method, path, http_version = data_list[0].split()
+        user_agent = data_list[2].split(":")[1].strip()
         self.http_method = HttpMethod(http_method)
         self.path = path
         self.http_version = http_version
+        self.user_agent = user_agent
 
 
 def main():
@@ -90,14 +93,13 @@ def main():
         elif request.path.startswith("/echo/"):
             message = request.path.split("/echo/")[1]
             response = Response(request.http_version, HttpStatusCode.OK, message)
+        elif request.path.startswith("/user-agent"):
+            response = Response(request.http_version, HttpStatusCode.OK, request.user_agent)
         else:
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
 
         # Send the response to client
         client_socket.sendall(response.encode())
-
-    # Close the connection
-    server_socket.close()
 
 
 if __name__ == "__main__":
