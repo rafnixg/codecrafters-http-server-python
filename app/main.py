@@ -83,29 +83,27 @@ def log_request(client_address, request: Request, response: Response):
 
 def client_handler(client_socket, client_address):
     """Handle the client connection."""
-    with client_socket:
-        # Receive the data from client
-        data = client_socket.recv(BUFFER_ZISE)
-
-        # Parse the data into a Request object
-        request = Request()
-        request.decode(data)
-        # Create a Response object
-        if request.path == "/":
-            response = Response(request.http_version, HttpStatusCode.OK)
-        elif request.path.startswith("/echo/"):
-            message = request.path.split("/echo/")[1]
-            response = Response(request.http_version, HttpStatusCode.OK, message)
-        elif request.path.startswith("/user-agent"):
-            response = Response(
-                request.http_version, HttpStatusCode.OK, request.user_agent
-            )
-        else:
-            response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
-            # Send the response to client
-        # Print in log for web server
-        # log_request(client_address, request, response)
-        client_socket.sendall(response.encode())
+    # Receive the data from client
+    data = client_socket.recv(BUFFER_ZISE)
+    # Parse the data into a Request object
+    request = Request()
+    request.decode(data)
+    # Create a Response object
+    if request.path == "/":
+        response = Response(request.http_version, HttpStatusCode.OK)
+    elif request.path.startswith("/echo/"):
+        message = request.path.split("/echo/")[1]
+        response = Response(request.http_version, HttpStatusCode.OK, message)
+    elif request.path.startswith("/user-agent"):
+        response = Response(
+            request.http_version, HttpStatusCode.OK, request.user_agent
+        )
+    else:
+        response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
+        # Send the response to client
+    # Print in log for web server
+    # log_request(client_address, request, response)
+    client_socket.sendall(response.encode())
     # Close the connection
     client_socket.close()
 
@@ -131,9 +129,10 @@ def main():
         # Accept the connection from TCP client
         client_socket, client_address = server_socket.accept()
         # Create a thread to handle the client connection
-        threading.Thread(
+        thread = threading.Thread(
             target=client_handler, args=(client_socket, client_address)
-        ).start()
+        )
+        thread.start()
 
 
 if __name__ == "__main__":
