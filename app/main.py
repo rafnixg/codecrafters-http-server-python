@@ -65,6 +65,7 @@ class Request:
         """Parse the data from the client into a Request object."""
         data_list = data.decode().split(CRLF)
         http_method, path, http_version = data_list[0].split()
+        print(data_list)
         user_agent = data_list[2].split(":")[1].strip()
         self.http_method = HttpMethod(http_method)
         self.path = path
