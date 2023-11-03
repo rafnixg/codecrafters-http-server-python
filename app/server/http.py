@@ -29,14 +29,13 @@ class HttpStatusCode(Enum):
 class Request:
     """A class representing a HTTP request."""
 
-    def __init__(
-        self, http_method: HttpMethod = None, path: str = None, http_version: str = None
-    ) -> None:
-        self.http_method = http_method
-        self.path = path
-        self.http_version = http_version
-        self.user_agent = None
-        self.body = None
+    def __init__(self, data: bytes) -> None:
+        self.http_method : HttpMethod
+        self.path : str
+        self.http_version : str
+        self.user_agent : str
+        self.body : bytes
+        self.decode(data)
 
     def extract_http_method(self, data_list: list):
         """Extract the HTTP method from the data."""
@@ -61,13 +60,14 @@ class Request:
         self.http_method = HttpMethod(http_method)
         self.body = self.extract_body(data_list)
 
+
 class Response:
     """A class representing a HTTP response."""
 
     def __init__(
         self,
-        http_version: str,
-        http_status_code: HttpStatusCode,
+        http_version: str = "HTTP/1.1",
+        http_status_code: HttpStatusCode = HttpStatusCode.OK,
         content_type="text/plain",
         body: str = None,
     ) -> None:
