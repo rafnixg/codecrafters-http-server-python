@@ -16,14 +16,18 @@ END_HEADERS = CRLF + CRLF
 
 class HttpMethod(StrEnum):
     """An enum representing the HTTP methods."""
-
     GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    OPTIONS = "OPTIONS"
+    HEAD = "HEAD"
 
 
 class HttpStatusCode(Enum):
     """An enum representing the HTTP status codes."""
-
     OK = (200, "OK")
+    CREATED = (201, "Created")
     NOT_FOUND = (404, "Not Found")
 
     def __init__(self, code: int, message: str) -> None:
@@ -66,6 +70,7 @@ class Request:
         self.path = path
         self.http_version = http_version
         self.user_agent = None
+        self.body = None
 
     def extract_http_method(self, data_list: list):
         """Extract the HTTP method from the data."""
@@ -78,12 +83,18 @@ class Request:
             user_agent = user_agent.split(":")[1].strip()
         return user_agent
 
+    def extract_body(self, data_list):
+        """Extract the body from the data."""
+        return data_list[-1]
+
     def decode(self, data: bytes):
         """Parse the data from the client into a Request object."""
         data_list = data.decode().split(CRLF)
         http_method, self.path, self.http_version = self.extract_http_method(data_list)
         self.user_agent = self.extract_user_agent(data_list)
         self.http_method = HttpMethod(http_method)
+        self.body = self.extract_body(data_list)
+
 
 
 def log_request(client_address, request: Request, response: Response):
@@ -118,7 +129,7 @@ def router(directory_path: str, request: Request) -> Response:
             http_status_code=HttpStatusCode.OK,
             body=request.user_agent,
         )
-    elif request.path.startswith("/files/") and directory_path:
+    elif request.path.startswith("/files/") and directory_path and request.http_method == HttpMethod.GET:
         file_path = request.path.split("/files/")[1]
         try:
             with open(f"{directory_path}/{file_path}", "r", encoding="UTF-8") as file:
@@ -130,6 +141,14 @@ def router(directory_path: str, request: Request) -> Response:
                 )
         except FileNotFoundError:
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
+    elif request.path.startswith("/files/") and directory_path and request.http_method == HttpMethod.POST:
+        file_path = request.path.split("/files/")[1]
+        with open(f"{directory_path}/{file_path}", "w", encoding="UTF-8") as file:
+            file.write(request.body)
+        response = Response(
+            http_version=request.http_version,
+            http_status_code=HttpStatusCode.CREATED,
+        )
     return response
 
 
