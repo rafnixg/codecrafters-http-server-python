@@ -1,5 +1,7 @@
 """A simple HTTP server."""
 import socket
+import threading
+import datetime
 from enum import StrEnum, Enum
 
 # Constants
@@ -70,15 +72,17 @@ class Request:
         self.user_agent = user_agent
 
 
-def main():
-    """The main function."""
+def log_request(client_address, request: Request, response: Response):
+    """Print the request in log."""
+    date_time = datetime.datetime.now()
+    date_time_format = date_time.strftime("%d/%m/%Y %H:%M:%S")
+    print(
+        f"[{date_time_format}] {response.http_status_code.code} {request.http_method} {request.path} {client_address[0]} - {client_address[1]} - {request.user_agent}"
+    )
 
-    # Create a TCP socket
-    server_socket = socket.create_server((HOST, PORT), reuse_port=True)
 
-    # Accept the connection from TCP client
-    client_socket, client_address = server_socket.accept()
-
+def client_handler(client_socket, client_address):
+    """Handle the client connection."""
     with client_socket:
         # Receive the data from client
         data = client_socket.recv(BUFFER_ZISE)
@@ -86,7 +90,6 @@ def main():
         # Parse the data into a Request object
         request = Request()
         request.decode(data)
-
         # Create a Response object
         if request.path == "/":
             response = Response(request.http_version, HttpStatusCode.OK)
@@ -94,12 +97,41 @@ def main():
             message = request.path.split("/echo/")[1]
             response = Response(request.http_version, HttpStatusCode.OK, message)
         elif request.path.startswith("/user-agent"):
-            response = Response(request.http_version, HttpStatusCode.OK, request.user_agent)
+            response = Response(
+                request.http_version, HttpStatusCode.OK, request.user_agent
+            )
         else:
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
-
-        # Send the response to client
+            # Send the response to client
+        # Print in log for web server
+        log_request(client_address, request, response)
         client_socket.sendall(response.encode())
+
+
+def print_welcome_message():
+    """Print the welcome message."""
+    print(f"Listening on {HOST}:{PORT}...")
+    print("Press Ctrl+C to quit.\n")
+    print("Available endpoints:")
+    print("GET /")
+    print("GET /echo/<message>")
+    print("GET /user-agent")
+
+
+def main():
+    """The main function."""
+    # Create a TCP socket
+    server_socket = socket.create_server((HOST, PORT), reuse_port=True)
+    server_socket.listen()
+    print_welcome_message()
+
+    while True:
+        # Accept the connection from TCP client
+        client_socket, client_address = server_socket.accept()
+        # Create a thread to handle the client connection
+        threading.Thread(
+            target=client_handler, args=(client_socket, client_address)
+        ).start()
 
 
 if __name__ == "__main__":
