@@ -66,11 +66,17 @@ class Request:
         data_list = data.decode().split(CRLF)
         http_method, path, http_version = data_list[0].split()
         print(data_list)
-        user_agent = data_list[2].split(":")[1].strip()
+        user_agent = self.extract_user_agent(data_list)
         self.http_method = HttpMethod(http_method)
         self.path = path
         self.http_version = http_version
         self.user_agent = user_agent
+
+    def extract_user_agent(self, data_list):
+        user_agent = data_list[2]
+        if user_agent:
+            user_agent = user_agent.split(":")[1].strip()
+        return user_agent
 
 
 def log_request(client_address, request: Request, response: Response):
