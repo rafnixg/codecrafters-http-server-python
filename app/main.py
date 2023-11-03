@@ -30,13 +30,21 @@ class HttpStatusCode(Enum):
 class Response:
     """A class representing a HTTP response."""
 
-    def __init__(self, http_version: str, http_status_code: HttpStatusCode) -> None:
+    def __init__(
+        self, http_version: str, http_status_code: HttpStatusCode, body: str = None
+    ) -> None:
         self.http_version = http_version
         self.http_status_code = http_status_code
+        self.body = body
+        self.content_type = "text/plain"
+        self.content_length = 0 if self.body is None else len(self.body)
 
     def encode(self) -> bytes:
         """Encode the response into bytes."""
-        message = f"{self.http_version} {self.http_status_code.code} {self.http_status_code.message}{END_HEADERS}"
+        message = f"{self.http_version} {self.http_status_code.code} {self.http_status_code.message}{CRLF}"
+        message += f"Content-Type: {self.content_type}{CRLF}"
+        message += f"Content-Length: {self.content_length}{END_HEADERS}"
+        message += f"{self.body}"
         return message.encode()
 
 
@@ -79,6 +87,9 @@ def main():
         # Create a Response object
         if request.path == "/":
             response = Response(request.http_version, HttpStatusCode.OK)
+        if request.path.startswith("/echo/"):
+            message = request.path.split("/echo/")[1]
+            response = Response(request.http_version, HttpStatusCode.OK, message)
         else:
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
 
