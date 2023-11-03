@@ -104,7 +104,7 @@ def client_handler(client_socket, client_address):
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
             # Send the response to client
         # Print in log for web server
-        log_request(client_address, request, response)
+        # log_request(client_address, request, response)
         client_socket.sendall(response.encode())
 
 
@@ -123,7 +123,7 @@ def main():
     # Create a TCP socket
     server_socket = socket.create_server((HOST, PORT), reuse_port=True)
     server_socket.listen()
-    print_welcome_message()
+    # print_welcome_message()
 
     while True:
         # Accept the connection from TCP client
