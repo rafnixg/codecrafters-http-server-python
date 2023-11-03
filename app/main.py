@@ -106,6 +106,7 @@ def client_handler(client_socket, client_address):
         # Print in log for web server
         # log_request(client_address, request, response)
         client_socket.sendall(response.encode())
+        client_socket.close()
 
 
 def print_welcome_message():
