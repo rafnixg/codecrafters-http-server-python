@@ -61,22 +61,23 @@ class Request:
         self.http_version = http_version
         self.user_agent = None
 
-    def decode(self, data: bytes):
-        """Parse the data from the client into a Request object."""
-        data_list = data.decode().split(CRLF)
-        http_method, path, http_version = data_list[0].split()
-        print(data_list)
-        user_agent = self.extract_user_agent(data_list)
-        self.http_method = HttpMethod(http_method)
-        self.path = path
-        self.http_version = http_version
-        self.user_agent = user_agent
+    def extract_http_method(self, data_list):
+        """Extract the HTTP method from the data."""
+        return data_list[0].split()
 
     def extract_user_agent(self, data_list):
+        """Extract the user agent from the data."""
         user_agent = data_list[2]
         if user_agent:
             user_agent = user_agent.split(":")[1].strip()
         return user_agent
+
+    def decode(self, data: bytes):
+        """Parse the data from the client into a Request object."""
+        data_list = data.decode().split(CRLF)
+        http_method, self.path, self.http_version = self.extract_http_method(data_list)
+        self.user_agent = self.extract_user_agent(data_list)
+        self.http_method = HttpMethod(http_method)
 
 
 def log_request(client_address, request: Request, response: Response):
@@ -102,14 +103,12 @@ def client_handler(client_socket, client_address):
         message = request.path.split("/echo/")[1]
         response = Response(request.http_version, HttpStatusCode.OK, message)
     elif request.path.startswith("/user-agent"):
-        response = Response(
-            request.http_version, HttpStatusCode.OK, request.user_agent
-        )
+        response = Response(request.http_version, HttpStatusCode.OK, request.user_agent)
     else:
         response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
         # Send the response to client
     # Print in log for web server
-    # log_request(client_address, request, response)
+    log_request(client_address, request, response)
     client_socket.sendall(response.encode())
     # Close the connection
     client_socket.close()
@@ -130,7 +129,7 @@ def main():
     # Create a TCP socket
     server_socket = socket.create_server((HOST, PORT), reuse_port=True)
     server_socket.listen()
-    # print_welcome_message()
+    print_welcome_message()
 
     while True:
         # Accept the connection from TCP client
