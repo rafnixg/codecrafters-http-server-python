@@ -98,14 +98,12 @@ def log_request(client_address, request: Request, response: Response):
 def router(directory_path: str, request: Request) -> Response:
     """Route the request to the corresponding handler."""
     response = Response(
-        http_version=request.http_version,
-        http_status_code=HttpStatusCode.NOT_FOUND
+        http_version=request.http_version, http_status_code=HttpStatusCode.NOT_FOUND
     )
     # Create a Response object
     if request.path == "/":
         response = Response(
-            http_version=request.http_version,
-            http_status_code=HttpStatusCode.OK
+            http_version=request.http_version, http_status_code=HttpStatusCode.OK
         )
     elif request.path.startswith("/echo/"):
         message = request.path.split("/echo/")[1]
@@ -120,7 +118,7 @@ def router(directory_path: str, request: Request) -> Response:
             http_status_code=HttpStatusCode.OK,
             body=request.user_agent,
         )
-    elif request.path.startswith("/files/"):
+    elif request.path.startswith("/files/") and directory_path:
         file_path = request.path.split("/files/")[1]
         try:
             with open(f"{directory_path}/{file_path}", "r", encoding="UTF-8") as file:
@@ -133,6 +131,18 @@ def router(directory_path: str, request: Request) -> Response:
         except FileNotFoundError:
             response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
     return response
+
+
+def get_directory_path():
+    """Get the directory path from the command line arguments.
+    --directory <directory_path>
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--directory", help="the directory path")
+    args = parser.parse_args()
+    if not args.directory:
+        return None
+    return args.directory
 
 
 def client_handler(client_socket, client_address, directory_path):
@@ -160,18 +170,6 @@ def print_welcome_message():
     print("GET /")
     print("GET /echo/<message>")
     print("GET /user-agent")
-
-
-def get_directory_path():
-    """Get the directory path from the command line arguments.
-    --directory <directory_path>
-    """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--directory", help="the directory path")
-    args = parser.parse_args()
-    if not args.directory:
-        parser.error("Please specify the directory path.")
-    return args.directory
 
 
 def main():
