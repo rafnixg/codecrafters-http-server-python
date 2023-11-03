@@ -87,7 +87,7 @@ def main():
         # Create a Response object
         if request.path == "/":
             response = Response(request.http_version, HttpStatusCode.OK)
-        if request.path.startswith("/echo/"):
+        elif request.path.startswith("/echo/"):
             message = request.path.split("/echo/")[1]
             response = Response(request.http_version, HttpStatusCode.OK, message)
         else:
