@@ -1,7 +1,9 @@
 """A simple HTTP server."""
+import argparse
 import socket
 import threading
 import datetime
+
 from enum import StrEnum, Enum
 
 # Constants
@@ -33,12 +35,16 @@ class Response:
     """A class representing a HTTP response."""
 
     def __init__(
-        self, http_version: str, http_status_code: HttpStatusCode, body: str = None
+        self,
+        http_version: str,
+        http_status_code: HttpStatusCode,
+        content_type="text/plain",
+        body: str = None,
     ) -> None:
         self.http_version = http_version
         self.http_status_code = http_status_code
         self.body = body
-        self.content_type = "text/plain"
+        self.content_type = content_type
         self.content_length = 0 if self.body is None else len(self.body)
 
     def encode(self) -> bytes:
@@ -61,11 +67,11 @@ class Request:
         self.http_version = http_version
         self.user_agent = None
 
-    def extract_http_method(self, data_list):
+    def extract_http_method(self, data_list: list):
         """Extract the HTTP method from the data."""
         return data_list[0].split()
 
-    def extract_user_agent(self, data_list):
+    def extract_user_agent(self, data_list: list):
         """Extract the user agent from the data."""
         user_agent = data_list[2]
         if user_agent:
@@ -89,7 +95,47 @@ def log_request(client_address, request: Request, response: Response):
     )
 
 
-def client_handler(client_socket, client_address):
+def router(directory_path: str, request: Request) -> Response:
+    """Route the request to the corresponding handler."""
+    response = Response(
+        http_version=request.http_version,
+        http_status_code=HttpStatusCode.NOT_FOUND
+    )
+    # Create a Response object
+    if request.path == "/":
+        response = Response(
+            http_version=request.http_version,
+            http_status_code=HttpStatusCode.OK
+        )
+    elif request.path.startswith("/echo/"):
+        message = request.path.split("/echo/")[1]
+        response = Response(
+            http_version=request.http_version,
+            http_status_code=HttpStatusCode.OK,
+            body=message,
+        )
+    elif request.path.startswith("/user-agent"):
+        response = Response(
+            http_version=request.http_version,
+            http_status_code=HttpStatusCode.OK,
+            body=request.user_agent,
+        )
+    elif request.path.startswith("/files/"):
+        file_path = request.path.split("/files/")[1]
+        try:
+            with open(f"{directory_path}/{file_path}", "r", encoding="UTF-8") as file:
+                response = Response(
+                    http_version=request.http_version,
+                    http_status_code=HttpStatusCode.OK,
+                    content_type="application/octet-stream",
+                    body=file.read(),
+                )
+        except FileNotFoundError:
+            response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
+    return response
+
+
+def client_handler(client_socket, client_address, directory_path):
     """Handle the client connection."""
     # Receive the data from client
     data = client_socket.recv(BUFFER_ZISE)
@@ -97,19 +143,11 @@ def client_handler(client_socket, client_address):
     request = Request()
     request.decode(data)
     # Create a Response object
-    if request.path == "/":
-        response = Response(request.http_version, HttpStatusCode.OK)
-    elif request.path.startswith("/echo/"):
-        message = request.path.split("/echo/")[1]
-        response = Response(request.http_version, HttpStatusCode.OK, message)
-    elif request.path.startswith("/user-agent"):
-        response = Response(request.http_version, HttpStatusCode.OK, request.user_agent)
-    else:
-        response = Response(request.http_version, HttpStatusCode.NOT_FOUND)
-        # Send the response to client
+    response = router(directory_path, request)
+    # Send the response to client
+    client_socket.sendall(response.encode())
     # Print in log for web server
     log_request(client_address, request, response)
-    client_socket.sendall(response.encode())
     # Close the connection
     client_socket.close()
 
@@ -124,8 +162,23 @@ def print_welcome_message():
     print("GET /user-agent")
 
 
+def get_directory_path():
+    """Get the directory path from the command line arguments.
+    --directory <directory_path>
+    """
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--directory", help="the directory path")
+    args = parser.parse_args()
+    if not args.directory:
+        parser.error("Please specify the directory path.")
+    return args.directory
+
+
 def main():
     """The main function."""
+    # Get the directory path from the command line arguments
+    directory_path = get_directory_path()
+
     # Create a TCP socket
     server_socket = socket.create_server((HOST, PORT), reuse_port=True)
     server_socket.listen()
@@ -136,7 +189,7 @@ def main():
         client_socket, client_address = server_socket.accept()
         # Create a thread to handle the client connection
         thread = threading.Thread(
-            target=client_handler, args=(client_socket, client_address)
+            target=client_handler, args=(client_socket, client_address, directory_path)
         )
         thread.start()
 
