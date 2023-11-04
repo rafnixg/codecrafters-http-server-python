@@ -3,9 +3,9 @@ import socket
 import threading
 
 from app.server.constant import BUFFER_ZISE
-from app.server.http import Request, HttpMethod
+from app.server.http import Request, HttpMethod, Response, HttpStatusCode
 from app.server.log import log_request, print_welcome_message
-from app.server.router import router
+from app.server.router import Route
 
 
 class Server:
@@ -18,15 +18,19 @@ class Server:
         self.port = port
         self.directory_path = directory_path
         self.thread_pool_size = thread_pool_size
-        self.endpoints = {}
+        self.routes = []
 
-    def add_endpoint(self, method: HttpMethod, endpoint: str, handler: callable):
+    def add_route(self, method: HttpMethod, endpoint: str, handler: callable):
         """Add an endpoint to the server."""
-        self.endpoints[(method, endpoint)] = handler
-    
-    def get_endpoint(self, method: HttpMethod, endpoint: str):
-        """Get an endpoint from the server."""
-        return self.endpoints[(method, endpoint)]
+
+        self.routes.append(Route(method, endpoint, handler))
+
+    def handle_request(self, request: Request) -> Response:
+        """Route the request to the corresponding handler."""
+        for route in self.routes:
+            if route.match(request):
+                return route.handler(self, request)
+        return Response(http_status_code=HttpStatusCode.NOT_FOUND)
 
     def run(self):
         """Run the server."""
@@ -41,18 +45,20 @@ class Server:
             # Create a thread to handle the client connection
             thread = threading.Thread(
                 target=self.server_handler,
-                args=(client_socket, client_address, self.directory_path),
+                args=(client_socket, client_address),
             )
             thread.start()
 
-    def server_handler(self, client_socket, client_address, directory_path):
+    def server_handler(self, client_socket, client_address):
         """Handle the client connection."""
         # Receive the data from client
         data = client_socket.recv(BUFFER_ZISE)
         # Parse the data into a Request object
         request = Request(data)
         # Create a Response object
-        response = router(directory_path, request)
+        # handle_request
+        response = self.handle_request(request)
+        # response = router_match(directory_path, request)
         # Send the response to client
         client_socket.sendall(response.encode())
         # Print in log for web server
