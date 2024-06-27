@@ -1,5 +1,7 @@
 """This module contains the HTTP-related enums."""
 
+import gzip
+
 from enum import StrEnum, Enum
 from app.server.constant import CRLF, END_HEADERS, ACCEPT_ENCODING
 
@@ -98,12 +100,20 @@ class Response:
         self.content_encoding = content_encoding
         self.content_length = 0 if self.body is None else len(self.body)
 
+    def compress_message(self):
+        """Compress the message using gzip."""
+        if self.content_encoding == "gzip":
+            self.body = gzip.compress(self.body.encode())
+            self.content_length = len(self.body)
+
     def encode(self) -> bytes:
         """Encode the response into bytes."""
         message = f"{self.http_version} {self.http_status_code.code} {self.http_status_code.message}{CRLF}"
         if self.content_encoding:
             message += f"Content-Encoding: {self.content_encoding}{CRLF}"
+            self.compress_message()
         message += f"Content-Type: {self.content_type}{CRLF}"
         message += f"Content-Length: {self.content_length}{END_HEADERS}"
         message += f"{self.body}"
+
         return message.encode()
