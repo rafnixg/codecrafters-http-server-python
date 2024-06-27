@@ -42,16 +42,26 @@ class Request:
         self.body: bytes
         self.decode(data)
 
-    def validate_accept_encoding(self, accept_encoding: str):
-        """Extract the accept encoding from the data."""
+    def validate_accept_encoding(self, accept_encoding: str) -> str:
+        """Validate the Accept-Encoding header.
+        args:
+            accept_encoding: str: The Accept-Encoding header.
+        returns:
+            str: The validated Accept-Encoding header.
+        """
         accept_encoding_list = accept_encoding.split(", ")
         for accept_encoding in accept_encoding_list:
             if accept_encoding in ACCEPT_ENCODING:
                 return accept_encoding
         return ""
 
-    def parse_http_request(self, data: bytes):
-        """Parse the data from the client into a Request object."""
+    def parse_http_request(self, data: bytes) -> dict:
+        """Parse the HTTP request data into a dictionary.
+        args:
+            data: bytes: The HTTP request data.
+        returns:
+            dict: The parsed HTTP request data.
+        """
         data_list = data.decode().split(CRLF)
         data_request_line = data_list.pop(0)
         method, path, http_version = data_request_line.split()
@@ -68,8 +78,13 @@ class Request:
                 data_dict[key] = value
         return data_dict
 
-    def decode(self, data: bytes):
-        """Parse the data from the client into a Request object."""
+    def decode(self, data: bytes) -> None:
+        """Decode the HTTP request data.
+        args:
+            data: bytes: The HTTP request data.
+        returns:
+            None
+        """
         data_dict = self.parse_http_request(data)
         self.user_agent = data_dict.get("User-Agent", "")
         self.accept = data_dict.get("Accept", "")
@@ -99,15 +114,22 @@ class Response:
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.content_length = 0 if self.body is None else len(self.body)
+        self.response = self.encode()
 
-    def compress_message(self):
-        """Compress the message using gzip."""
+    def compress_message(self) -> None:
+        """Compress the message using gzip.
+        returns:
+            None
+        """
         if self.content_encoding == "gzip":
             self.body = gzip.compress(self.body)
             self.content_length = len(self.body)
 
     def encode(self) -> bytes:
-        """Encode the response into bytes."""
+        """Encode the HTTP response message.
+        returns:
+            bytes: The encoded HTTP response message.
+        """
         message = f"{self.http_version} {self.http_status_code.code} {self.http_status_code.message}{CRLF}"
         if self.content_encoding:
             message += f"Content-Encoding: {self.content_encoding}{CRLF}"
