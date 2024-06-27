@@ -60,7 +60,7 @@ class Request:
         }
         for header in data_list:
             if header:
-                key, value = header.split(":", 1)
+                key, value = header.split(": ", 1)
                 data_dict[key] = value
         return data_dict
 
