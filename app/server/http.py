@@ -115,5 +115,6 @@ class Response:
         message += f"Content-Type: {self.content_type}{CRLF}"
         message += f"Content-Length: {self.content_length}{END_HEADERS}"
         message_encode = message.encode()
-        message_encode += self.body
+        if self.body:
+            message_encode += self.body
         return message_encode
