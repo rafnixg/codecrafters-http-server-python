@@ -60,6 +60,7 @@ def echo_handler(server, request: Request) -> Response:
     message = request.path.split("/echo/")[1]
     return Response(
         body=message,
+        content_encoding=request.accept_encoding if request.accept_encoding else '',
     )
 
 
