@@ -114,7 +114,6 @@ class Response:
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.content_length = 0 if self.body is None else len(self.body)
-        self.response = self.encode()
 
     def compress_message(self) -> None:
         """Compress the message using gzip.
