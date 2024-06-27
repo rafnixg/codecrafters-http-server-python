@@ -42,9 +42,11 @@ class Request:
 
     def validate_accept_encoding(self, accept_encoding: str):
         """Extract the accept encoding from the data."""
-        if accept_encoding not in ACCEPT_ENCODING:
-            return ""
-        return accept_encoding
+        accept_encoding_list = accept_encoding.split(", ")
+        for accept_encoding in accept_encoding_list:
+            if accept_encoding in ACCEPT_ENCODING:
+                return accept_encoding
+        return ""
 
     def parse_http_request(self, data: bytes):
         """Parse the data from the client into a Request object."""
