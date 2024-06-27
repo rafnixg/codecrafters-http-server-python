@@ -95,7 +95,7 @@ class Response:
     ) -> None:
         self.http_version = http_version
         self.http_status_code = http_status_code
-        self.body = body
+        self.body = body.encode() if body else None
         self.content_type = content_type
         self.content_encoding = content_encoding
         self.content_length = 0 if self.body is None else len(self.body)
@@ -103,7 +103,7 @@ class Response:
     def compress_message(self):
         """Compress the message using gzip."""
         if self.content_encoding == "gzip":
-            self.body = gzip.compress(self.body.encode())
+            self.body = gzip.compress(self.body)
             self.content_length = len(self.body)
 
     def encode(self) -> bytes:
@@ -114,6 +114,6 @@ class Response:
             self.compress_message()
         message += f"Content-Type: {self.content_type}{CRLF}"
         message += f"Content-Length: {self.content_length}{END_HEADERS}"
-        message += f"{self.body}"
-
-        return message.encode()
+        message_encode = message.encode()
+        message_encode += self.body
+        return message_encode
