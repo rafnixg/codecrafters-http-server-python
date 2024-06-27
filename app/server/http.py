@@ -40,46 +40,42 @@ class Request:
         self.body: bytes
         self.decode(data)
 
-    def extract_http_method(self, data_list: list):
-        """Extract the HTTP method from the data."""
-        return data_list[0].split()
-
-    def extract_user_agent(self, data_list: list):
-        """Extract the user agent from the data."""
-        user_agent = data_list[2]
-        if user_agent:
-            user_agent = user_agent.split(":")[1].strip()
-        return user_agent
-
-    def extract_accept(self, data_list: list):
-        """Extract the accept from the data."""
-        accept = data_list[3]
-        if accept:
-            accept = accept.split(":")[1].strip()
-        return accept
-
-    def extract_accept_encoding(self, data_list: list):
+    def validate_accept_encoding(self, accept_encoding: str):
         """Extract the accept encoding from the data."""
-        accept_encoding = data_list[4]
-        if accept_encoding:
-            accept_encoding = accept_encoding.split(":")[1].strip()
         if accept_encoding not in ACCEPT_ENCODING:
             return ""
         return accept_encoding
 
-    def extract_body(self, data_list):
-        """Extract the body from the data."""
-        return data_list[-1]
+    def parse_http_request(self, data: bytes):
+        """Parse the data from the client into a Request object."""
+        data_list = data.decode().split(CRLF)
+        data_request_line = data_list.pop(0)
+        method, path, http_version = data_request_line.split()
+        data_body = data_list.pop(-1)
+        data_dict = {
+            "Method": method,
+            "Path": path,
+            "HTTP-Version": http_version,
+            "Body": data_body,
+        }
+        for header in data_list:
+            if header:
+                key, value = header.split(":", 1)
+                data_dict[key] = value
+        return data_dict
 
     def decode(self, data: bytes):
         """Parse the data from the client into a Request object."""
-        data_list = data.decode().split(CRLF)
-        http_method, self.path, self.http_version = self.extract_http_method(data_list)
-        self.http_method = HttpMethod(http_method)
-        self.user_agent = self.extract_user_agent(data_list)
-        self.accept = self.extract_accept(data_list)
-        self.accept_encoding = self.extract_accept_encoding(data_list)
-        self.body = self.extract_body(data_list)
+        data_dict = self.parse_http_request(data)
+        self.user_agent = data_dict.get("User-Agent", "")
+        self.accept = data_dict.get("Accept", "")
+        self.accept_encoding = self.validate_accept_encoding(
+            accept_encoding=data_dict.get("Accept-Encoding", "")
+        )
+        self.body = data_dict.get("Body", "")
+        self.http_method = HttpMethod(data_dict.get("Method", ""))
+        self.path = data_dict.get("Path", "")
+        self.http_version = data_dict.get("HTTP-Version", "")
 
 
 class Response:
@@ -90,7 +86,7 @@ class Response:
         http_version: str = "HTTP/1.1",
         http_status_code: HttpStatusCode = HttpStatusCode.OK,
         content_type="text/plain",
-        content_encoding: str = None,
+        content_encoding: str = "",
         body: str = None,
     ) -> None:
         self.http_version = http_version
